@@ -1,0 +1,99 @@
+2)Stats of top run scorers
+   Age of players
+
+
+/* First delete umpire column as it is assumed of no use in analysis of performance of teams/players and does not have dob values. */
+
+alter table player drop column is_umpire;
+delete from player where player.dob is null;
+alter table player add column age interval;
+update player set age = (AGE('2017-01-01',player.dob));
+
+select * from player order by age limit(10);
+
+YOUNGEST PLAYERS
+
+ player_id |    player_name    |    dob     | batting_hand |     bowling_skill      | country_name |           age
+-----------+-------------------+------------+--------------+------------------------+--------------+-------------------------
+       410 | Ishan Kishan      | 1998-07-18 | Left_Hand    |                        | India        | 18 years 5 mons 14 days
+       402 | SN Khan           | 1997-10-27 | Right_Hand   | Legbreak               | India        | 19 years 2 mons 5 days
+       420 | RR Pant           | 1997-10-04 | Left_Hand    |                        | India        | 19 years 2 mons 28 days
+       432 | S Kaushik         | 1995-09-07 | Right_Hand   | Slow left-arm chinaman | India        | 21 years 3 mons 24 days
+       460 | Mustafizur Rahman | 1995-09-06 | Left_Hand    | Left-arm fast-medium   | Bangladesh   | 21 years 3 mons 25 days
+       394 | DJ Hooda          | 1995-04-19 | Right_Hand   | Right-arm offbreak     | India        | 21 years 8 mons 12 days
+       462 | Kuldeep Yadav     | 1994-12-14 | Left_Hand    | Slow left-arm chinaman | India        | 22 years 18 days
+       393 | SS Iyer           | 1994-12-06 | Right_Hand   | Legbreak googly        | India        | 22 years 26 days
+      
+OLDEST PLAYERS  
+
+select * from player order by age DESC limit(10);
+ player_id |  player_name  |    dob     | batting_hand |     bowling_skill      | country_name |           age
+-----------+---------------+------------+--------------+------------------------+--------------+--------------------------
+        38 | SK Warne      | 1969-09-13 | Right_Hand   | Legbreak googly        | Australia    | 47 years 3 mons 18 days
+        44 | ST Jayasuriya | 1969-09-30 | Left_Hand    | Slow left-arm orthodox | Sri Lanka    | 47 years 3 mons 1 day
+        34 | DS Lehmann    | 1970-02-05 | Left_Hand    | Slow left-arm orthodox | Australia    | 46 years 10 mons 24 days
+       118 | GD McGrath    | 1970-02-09 | Right_Hand   | Right-arm fast-medium  | Australia    | 46 years 10 mons 20 days
+        16 | SB Joshi      | 1970-06-06 | Left_Hand    | Slow left-arm orthodox | India        | 46 years 6 mons 25 days
+       124 | A Kumble      | 1970-10-17 | Right_Hand   | Legbreak googly        | India        | 46 years 2 mons 15 days
+       316 | GB Hogg       | 1971-02-06 | Left_Hand    | Slow left-arm chinaman | Australia    | 45 years 10 mons 23 days
+       370 | PV Tambe      | 1971-10-08 | Right_Hand   | Legbreak               | India        | 45 years 2 mons 24 days
+
+ORANGE CAP HOLDER STATS PER SEASON 
+
+select season_year, player.player_name as orange_cap, extract(YEAR from player.age) as Age, count(player_match.match_id) as matches, player.batting_hand,player.country_name
+from season 
+join player on season.orange_cap_id=player.player_id 
+join player_match on season.orange_cap_id=player_match.player_id
+group by season_year, player.player_name, player.age,player.batting_hand,player.country_name
+order by season_year ASC;
+
+ season_year |  orange_cap  | age | matches | batting_hand | country_name
+-------------+--------------+-----+---------+--------------+--------------
+        2008 | SE Marsh     |  33 |      62 | Left_Hand    | Australia
+        2009 | ML Hayden    |  45 |      32 | Left_Hand    | Australia
+        2010 | SR Tendulkar |  43 |      78 | Right_Hand   | India
+        2011 | CH Gayle     |  37 |      89 | Left_Hand    | West Indies
+        2012 | CH Gayle     |  37 |      89 | Left_Hand    | West Indies
+        2013 | MEK Hussey   |  41 |      59 | Left_Hand    | Australia
+        2014 | RV Uthappa   |  31 |     134 | Right_Hand   | India
+        2015 | DA Warner    |  30 |      99 | Left_Hand    | Australia
+        2016 | V Kohli      |  28 |     136 | Right_Hand   | India
+
+Average age of orange cap holders compared to all players
+
+select round(AVG(extract(YEAR from player.age))) as Average_AGE_orange from season join player on season.orange_cap_id=player.player_id;
+  average_age_orange
+ --------------------
+  36
+
+select round(AVG(extract(YEAR from player.age))) as Average_AGE_all from player;
+  average_age_all
+ -------------------
+  31
+
+select count(player_id), batting_hand
+from player group by batting_hand;
+
+count | batting_hand
+-------+--------------
+   345 | Right_Hand
+   126 | Left_Hand
+
+Average number of matches played by orange cap  players and all players
+
+select player_id, count(match_id) as matches into temporary table mytemptable from player_match group by player_id;
+select round(avg(matches)) from mytemptable where matches>13;
+
+select round(avg(matches)) from season join mytemptable on season.orange_cap_id=mytemptable.player_id;
+ round
+-------
+    86
+select round(avg(matches)) from mytemptable where matches>13;
+ round
+-------
+    50
+
+Thus, these insights obtained orange cap holder is,
+5 years older than average player, 
+40 % more likely to be a left hander than average player,
+and has played 20-25 more matches than average out of players who have played minimum of one season.

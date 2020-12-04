@@ -1,0 +1,51 @@
+4) Venue and toss decision analysis
+ It is useful to explore if toss decisions play a role at specific venues */
+
+-- Create copy of match as venue_table and add encoded columns for win type 
+--to know which team won according to toss decision
+
+select * into venue_table from match;
+alter table venue_table add column by_runs int;
+update venue_table set by_runs= 1 where win_type='by runs';
+alter table venue_table add column by_wickets int;
+update venue_table set by_wickets=1 where win_type='by wickets';
+
+-- table myvenuetable gives the final stats output, that is probability to win in the venue according
+--to bat or bowl first.
+
+select venue_name, city_name, 
+(sum(by_runs)*100/count(match_id)) as batting_first, (sum(by_wickets)*100/count(match_id)) as bowl_first,
+count(match_id)  as matches,
+@((sum(by_runs)*100/count(match_id)) - (sum(by_wickets)*100/count(match_id))) as diff
+into myvenuetable
+from venue_table group by venue_name,city_name
+order by matches DESC;
+
+alter table myvenuetable add column prefer_to varchar(20);
+update myvenuetable 
+set prefer_to = case when batting_first > bowl_first then 'bat_first' else 'bowl_first' end;
+
+select venue_name, city_name,prefer_to, 
+case when batting_first > bowl_first then batting_first else bowl_first end as prob_win, matches 
+from myvenuetable 
+where matches>10 order by matches DESC limit(14);
+                 venue_name                 | city_name  | prefer_to  | prob_win | matches
+--------------------------------------------+------------+------------+----------+---------
+ M Chinnaswamy Stadium                      | Bangalore  | bowl_first |       55 |      56
+ Eden Gardens                               | Kolkata    | bowl_first |       59 |      54
+ Feroz Shah Kotla                           | Delhi      | bowl_first |       53 |      52
+ Wankhede Stadium                           | Mumbai     | bat_first  |       51 |      49
+ MA Chidambaram Stadium, Chepauk            | Chennai    | bat_first  |       62 |      48
+ Rajiv Gandhi International Stadium, Uppal  | Hyderabad  | bowl_first |       63 |      41
+ Punjab Cricket Association Stadium, Mohali | Chandigarh | bowl_first |       57 |      35
+ Sawai Mansingh Stadium                     | Jaipur     | bowl_first |       69 |      33
+ Dr DY Patil Sports Academy                 | Mumbai     | bowl_first |       58 |      17
+ Subrata Roy Sahara Stadium                 | Pune       | bat_first  |       64 |      17
+ Kingsmead                                  | Durban     | bat_first  |       60 |      15
+ Sardar Patel Stadium, Motera               | Ahmedabad  | bat_first  |       50 |      12
+ SuperSport Park                            | Centurion  | bowl_first |       66 |      12
+ Brabourne Stadium                          | Mumbai     | bat_first  |       54 |      11
+
+ /* Thus, in the home stadium for Rajasthan Royals team, Jaipur, team is 69 % more likely to
+ win the match if they get to bowl first. Similary the skewness towards toss decision 
+ is 62 % for batting first and 63% to bowling first in the CHennai and Hyderabad venues respectively.

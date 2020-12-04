@@ -1,0 +1,252 @@
+3)Most valued batsman
+There are several metrics to measure batting performance such as:
+Total runs,
+Hundreds/ Fifties,
+Strike rate: Runs per 100 balls.
+Batting average: Total runs divided by number of dismissals,
+miscellanous stats like age, matches played.
+
+One other metric this sql analysis will explore is correlation of runs scored by batsman and
+the team emerging victorious.
+Many cricket fans say some batsmen are 'game-changers' owing to their match winning performance. 
+In some matches the highest run scorer of the match can belong to the losingside owing to worse fielding 
+performance on team's part.
+In this a metric is explored which gives the probability the team will win the match based on if particular batsman
+score above 30 runs.
+Procedure:
+
+-- Temporary table mytemptable : to store number of matches played by a player
+
+select player_id, count(match_id) as matches into temporary table mytemptable 
+from player_match group by player_id;
+
+
+-- Temporary table mytemptable3 : for storing number of times a player is declared man of the match
+
+select player.player_id,count(man_of_the_match_id) as mano_match into mytemptable3 
+from match join player on match.man_of_the_match_id=player.player_id 
+group by player.player_id order by mano_match DESC;
+
+-- To count number of balls: unid serial
+
+alter table ball_by_ball add column unid serial;
+
+
+-- SQL View view_runrate that stores the aggregate statistics for batsmen
+
+/* Stats stored= Player name, matches played, number of times declared man of the match,
+                 total runs, strike rate = runs*100 / balls faced,
+                 batting average= total runs/ no. of matches,
+                 batting hand and age of player. */
+
+create view view_runrate as
+select ball_by_ball.striker_id, player.player_name, mytemptable.matches, 
+mytemptable3.mano_match,
+sum(cast(batsman_scored as int)) as runs, 
+round(sum(cast(batsman_scored as int)) *100 / count(unid)) as st_rate,
+round(sum(cast(batsman_scored as int))/mytemptable.matches) as batt_avg,
+player.batting_hand,
+extract(year from player.age) as age
+from ball_by_ball 
+join player on ball_by_ball.striker_id = player.player_id
+join mytemptable on ball_by_ball.striker_id = mytemptable.player_id
+join mytemptable3 on mytemptable3.player_id = ball_by_ball.striker_id
+group by ball_by_ball.striker_id,
+player.player_name,player.batting_hand,
+player.age,mytemptable.matches,mytemptable3.mano_match;
+
+select * from view_runrate order by batt_avg DESC ;
+
+striker_id |   player_name    | matches | mano_match | runs | st_rate | batt_avg | batting_hand | age
+------------+------------------+---------+------------+------+---------+----------+--------------+-----
+        383 | LMP Simmons      |      22 |          2 |  942 |     123 |       42 | Right_Hand   |  31
+        162 | CH Gayle         |      89 |         17 | 3436 |     146 |       38 | Left_Hand    |  37
+        100 | SE Marsh         |      62 |          9 | 2225 |     129 |       35 | Left_Hand    |  33
+         18 | ML Hayden        |      32 |          4 | 1107 |     131 |       34 | Left_Hand    |  45
+         19 | MEK Hussey       |      59 |         12 | 1977 |     119 |       33 | Left_Hand    |  41
+        187 | DA Warner        |      99 |         14 | 3354 |     138 |       33 | Left_Hand    |  30
+          8 | V Kohli          |     136 |         11 | 4103 |     127 |       30 | Right_Hand   |  28
+        133 | SR Tendulkar     |      78 |          8 | 2329 |     114 |       29 | Right_Hand   |  43
+         21 | SK Raina         |     146 |         13 | 4106 |     134 |       28 | Left_Hand    |  30
+         85 | AM Rahane        |      94 |         12 | 2675 |     117 |       28 | Right_Hand   |  28
+         40 | G Gambhir        |     132 |         12 | 3634 |     120 |       27 | Left_Hand    |  35
+        158 | KP Pietersen     |      36 |          3 | 1001 |     132 |       27 | Right_Hand   |  36
+        147 | DR Smith         |      79 |         10 | 2146 |     130 |       27 | Right_Hand   |  33
+        
+/* However there is a lot of discrepancy in terms of matches played 
+   thus true performance can only be obtained by comparing with similar experience level players */
+
+/* Level 1 of experience is < 50 matches, level 2 is 50-90 matches 
+and level 3 is >90 matches experience.*/
+
+ -- LEVEL 1 Batsmen < 50 matches
+
+  striker_id |   player_name   | matches | mano_match | runs | st_rate | batt_avg | batting_hand | age
+------------+-----------------+---------+------------+------+---------+----------+--------------+-----
+        383 | LMP Simmons     |      22 |          2 |  942 |     123 |       42 | Right_Hand   |  31
+         18 | ML Hayden       |      32 |          4 | 1107 |     131 |       34 | Left_Hand    |  45
+        158 | KP Pietersen    |      36 |          3 | 1001 |     132 |       27 | Right_Hand   |  36
+        355 | Q de Kock       |      25 |          1 |  657 |     124 |       26 | Left_Hand    |  24
+         74 | GC Smith        |      29 |          2 |  739 |     107 |       25 | Left_Hand    |  35
+         44 | ST Jayasuriya   |      30 |          2 |  768 |     134 |       25 | Left_Hand    |  47
+         56 | A Symonds       |      39 |          3 |  974 |     124 |       24 | Right_Hand   |  41
+         97 | HH Gibbs        |      36 |          1 |  886 |     105 |       24 | Right_Hand   |  42
+        372 | CJ Anderson     |      16 |          2 |  379 |     133 |       23 | Left_Hand    |  26
+        393 | SS Iyer         |      19 |          1 |  449 |     116 |       23 | Right_Hand   |  22
+        224 | MJ Lumb         |      12 |          1 |  278 |     140 |       23 | Left_Hand    |  36
+        161 | RS Bopara       |      24 |          1 |  531 |     113 |       22 | Right_Hand   |  31
+        305 | GJ Maxwell      |      43 |          4 |  919 |     154 |       21 | Right_Hand   |  28
+        345 | M Vohra         |      34 |          3 |  728 |     125 |       21 | Right_Hand   |  23
+        339 | KK Nair         |      40 |          2 |  877 |     125 |       21 | Right_Hand   |  25
+        167 | PC Valthaty     |      23 |          2 |  501 |     116 |       21 | Right_Hand   |  33
+
+/* Insights: 
+ Upcoming young players can be spotted from this list, for example, 
+ here it is LMP Simmons, Q de Kock, who were recruited by Mumbai Indians later, CJ Anderson, 
+ and SS Iyer who was later recruited into Indian National team and captains an IPL team.  
+
+ LEVEL 2 Batsmen 50-90 matches */
+
+ select * from view_runrate where matches < 95 and matches>50 order by batt_avg DESC;
+ striker_id |   player_name    | matches | mano_match | runs | st_rate | batt_avg | batting_hand | age
+------------+------------------+---------+------------+------+---------+----------+--------------+-----
+        162 | CH Gayle         |      89 |         17 | 3436 |     146 |       38 | Left_Hand    |  37
+        100 | SE Marsh         |      62 |          9 | 2225 |     129 |       35 | Left_Hand    |  33
+         19 | MEK Hussey       |      59 |         12 | 1977 |     119 |       33 | Left_Hand    |  41
+        133 | SR Tendulkar     |      78 |          8 | 2329 |     114 |       29 | Right_Hand   |  43
+         85 | AM Rahane        |      94 |         12 | 2675 |     117 |       28 | Right_Hand   |  28
+         32 | SR Watson        |      93 |         10 | 2553 |     136 |       27 | Right_Hand   |  35
+        147 | DR Smith         |      79 |         10 | 2146 |     130 |       27 | Right_Hand   |  33
+          2 | BB McCullum      |      92 |          5 | 2435 |     124 |       26 | Right_Hand   |  35
+        254 | AJ Finch         |      52 |          5 | 1304 |     120 |       25 | Right_Hand   |  30
+         53 | AC Gilchrist     |      80 |          7 | 2065 |     132 |       25 | Left_Hand    |  45
+        154 | JP Duminy        |      76 |          4 | 1926 |     121 |       25 | Left_Hand    |  32
+          6 | R Dravid         |      89 |          2 | 2170 |     113 |       24 | Right_Hand   |  43
+        320 | DA Miller        |      61 |          3 | 1480 |     140 |       24 | Left_Hand    |  27
+        306 | SPD Smith        |      53 |          3 | 1241 |     133 |       23 | Right_Hand   |  27
+/* insights: 
+            CH Gayle is the batsmen with highest performance in terms of strike rate and batting_average 
+            as he was successive orange cap/highest run scorer for two seasons.
+            Also performance by Rahane can be noted as on-par with international legends like SR Watson, 
+            BB McCullum, etc. */
+
+-- LEVEL 3 batsmen  >90 matches
+select * from view_runrate where matches>100 order by batt_avg DESC;
+
+ striker_id |   player_name   | matches | mano_match | runs | st_rate | batt_avg | batting_hand | age
+------------+-----------------+---------+------------+------+---------+----------+--------------+-----
+          8 | V Kohli         |     136 |         11 | 4103 |     127 |       30 | Right_Hand   |  28
+         21 | SK Raina        |     146 |         13 | 4106 |     134 |       28 | Left_Hand    |  30
+        110 | AB de Villiers  |     117 |         15 | 3213 |     147 |       27 | Right_Hand   |  32
+         57 | RG Sharma       |     142 |         13 | 3874 |     129 |       27 | Right_Hand   |  29
+         40 | G Gambhir       |     132 |         12 | 3634 |     120 |       27 | Left_Hand    |  35
+         42 | S Dhawan        |     113 |          1 | 3082 |     117 |       27 | Left_Hand    |  31
+         41 | V Sehwag        |     104 |         11 | 2728 |     148 |       26 | Right_Hand   |  38
+         46 | RV Uthappa      |     134 |          5 | 3390 |     124 |       25 | Right_Hand   |  31
+         20 | MS Dhoni        |     142 |         12 | 3270 |     135 |       23 | Right_Hand   |  35
+         27 | Yuvraj Singh    |     106 |          4 | 2328 |     125 |       21 | Left_Hand    |  35
+        208 | AT Rayudu       |     109 |          6 | 2325 |     123 |       21 | Right_Hand   |  31
+      
+
+/* Insights: This list roughly indicates the best batsmen in internation cricket during 2016, 
+like AB DeVilliers, V Kohli, Rohit Sharma. Also can be noted that despite playing most number of matches,
+SK Raina scores an average of 28 and strike rate of 134. */
+
+/* A man of the match is almost always chosen from the winning side and thus we can judge from the
+stats how much the batsmen's runs contribute to the team winning the match. A 'game changer' is 
+colloquial term for batsmen who can win the match for the team with crucial runs. */
+
+-- Metric 1 : dividing runs by man of the match awards to give a comparative sense among the batsmen
+
+select player_name, matches, mano_match, runs, runs/mano_match as game_changer, st_rate,batt_avg from view_runrate order by game_changer;
+ player_name    | matches | mano_match | runs | game_changer | st_rate | batt_avg
+------------------+---------+------------+------+--------------+---------+----------
+ Harbhajan Singh  |     125 |          6 |  783 |           76 |     136 |        6
+ MEK Hussey       |      59 |         12 | 1977 |           60 |     119 |       33
+ YK Pathan        |     134 |         16 | 2779 |           57 |     142 |       20
+ CH Gayle         |      89 |         17 | 3436 |           49 |     146 |       38
+ AB de Villiers   |     117 |         15 | 3213 |           46 |     147 |       27
+ DR Smith         |      79 |         10 | 2146 |           46 |     130 |       27
+ RA Jadeja        |     125 |          7 | 1574 |           44 |     117 |       12
+ AM Rahane        |      94 |         12 | 2675 |           44 |     117 |       28
+ GJ Maxwell       |      43 |          4 |  919 |           43 |     154 |       21
+ BJ Hodge         |      66 |          6 | 1400 |           42 |     121 |       21
+ DA Warner        |      99 |         14 | 3354 |           41 |     138 |       33
+ JH Kallis        |      98 |         10 | 2427 |           41 |     105 |       24
+ M Vohra          |      34 |          3 |  728 |           41 |     125 |       21
+ KA Pollard       |     106 |          8 | 1959 |           40 |     141 |       18
+ SE Marsh         |      62 |          9 | 2225 |           40 |     129 |       35
+ V Sehwag         |     104 |         11 | 2728 |           40 |     148 |       26
+ SR Watson        |      93 |         10 | 2553 |           39 |     136 |       27
+ AJ Finch         |      52 |          5 | 1304 |           38 |     120 |       25
+ SC Ganguly       |      58 |          5 | 1349 |           37 |     101 |       23
+ MS Dhoni         |     142 |         12 | 3270 |           36 |     135 |       23
+ ML Hayden        |      32 |          4 | 1107 |           36 |     131 |       34
+ SR Tendulkar     |      78 |          8 | 2329 |           34 |     114 |       29
+
+/* Insights: This metric is flawed as man of the match award can also be awarded to bowlers for
+taking more wickets. However, here we assume that batsmen are of importance to task at hand.
+Thus, most bowlers are filtered out by constraint of minimum runs.
+From the results we can conclude that important game changers are MEK Hussey, CH Gayle, AB de Villiers,
+DR Smith, AM Rahane, GJ Maxwell and DA Warner.
+If order is reversed we can see players like S Dhawan who only have one man of the match award till 2016
+despite decent batting performance.
+
+Metric 2: Runs contribution to team winning the match
+Instance where team has won and batsman has scored above 30. */
+
+create view view1 as
+select bb.match_id,bb.striker_id,player.player_name,
+sum(cast(bb.batsman_scored as int)) as runs, 
+match.match_winner_id,bb.innings_id,bb.team_batting_id,team.team_name
+from ball_by_ball as bb 
+join match on bb.match_id=match.match_id 
+join player on bb.striker_id=player.player_id
+join team on bb.team_batting_id=team.team_id
+group by bb.striker_id,player.player_name,bb.match_id,bb.innings_id,match.match_winner_id,bb.team_batting_id,team.team_name
+order by bb.match_id,bb.innings_id;
+
+select player_name,mytemptable.matches,count(striker_id) as won_match,
+round(cast(count(striker_id) as decimal)*100/cast(mytemptable.matches as decimal),2) as ratio 
+from view1 
+join mytemptable on view1.striker_id=mytemptable.player_id
+where runs >30 and team_batting_id=match_winner_id and matches>13
+group by player_name,mytemptable.matches order by ratio DESC;
+
+ player_name      | matches | won_match | ratio
+------------------+---------+-----------+-------
+ LMP Simmons      |      22 |        12 | 54.55
+ MEK Hussey       |      59 |        24 | 40.68
+ ML Hayden        |      32 |        10 | 31.25
+ SR Tendulkar     |      78 |        24 | 30.77
+ SE Marsh         |      62 |        19 | 30.65
+ CH Gayle         |      89 |        26 | 29.21
+ DA Warner        |      99 |        28 | 28.28
+ GC Smith         |      29 |         8 | 27.59
+ DR Smith         |      79 |        21 | 26.58
+ G Gambhir        |     132 |        35 | 26.52
+ BB McCullum      |      92 |        24 | 26.09
+ F du Plessis     |      50 |        13 | 26.00
+ TM Dilshan       |      51 |        13 | 25.49
+ SK Raina         |     146 |        37 | 25.34
+ SA Asnodkar      |      20 |         5 | 25.00
+ AB de Villiers   |     117 |        29 | 24.79
+ AM Rahane        |      94 |        23 | 24.47
+ SR Watson        |      93 |        22 | 23.66
+ RG Sharma        |     142 |        32 | 22.54
+ V Sehwag         |     104 |        22 | 21.15
+ SS Iyer          |      19 |         4 | 21.05
+ M Vijay          |     100 |        21 | 21.00
+ V Kohli          |     136 |        28 | 20.59
+
+ /*Thus, batsmen like LMP Simmons, MEK Hussey, ML Hayden, SR Tendulkar, DA Warner will help the team
+ win the match if they score above 30.
+
+ 
+
+
+
+ 
+
+
+

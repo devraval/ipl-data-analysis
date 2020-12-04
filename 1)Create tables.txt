@@ -1,0 +1,166 @@
+1) Create tables in SQL from CSV
+
+-- copy data into tables created using following command
+/* COPY table_name  FROM 'file path' DELIMITER ',' CSV HEADER; */
+
+CREATE TABLE public.team
+(
+    team_id integer NOT NULL,
+    team_name character varying(100) COLLATE pg_catalog."default",
+    team_short_code character varying(10) COLLATE pg_catalog."default",
+    CONSTRAINT team_pkey PRIMARY KEY (team_id)
+)
+
+
+CREATE TABLE public.player
+(
+    player_id integer NOT NULL,
+    player_name character varying(400) COLLATE pg_catalog."default" NOT NULL,
+    dob date,
+    batting_hand character varying(20) COLLATE pg_catalog."default",
+    bowling_skill character varying(50) COLLATE pg_catalog."default",
+    country_name character varying(30) COLLATE pg_catalog."default" NOT NULL,
+    age interval,
+    CONSTRAINT player_pkey PRIMARY KEY (player_id)
+)
+
+CREATE TABLE public.player_match
+(
+    match_id integer,
+    player_id integer,
+    team_id integer,
+    is_keeper integer,
+    is_captain integer,
+    CONSTRAINT player_match_player_id_fkey FOREIGN KEY (player_id)
+        REFERENCES public.player (player_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION,
+    CONSTRAINT player_match_team_id_fkey FOREIGN KEY (team_id)
+        REFERENCES public.team (team_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+)
+
+
+CREATE TABLE public.season
+(
+    season_id integer NOT NULL,
+    season_year integer,
+    orange_cap_id integer,
+    purple_cap_id integer,
+    man_of_the_series_id integer,
+    CONSTRAINT season_pkey PRIMARY KEY (season_id),
+    CONSTRAINT season_man_of_the_series_id_fkey FOREIGN KEY (man_of_the_series_id)
+        REFERENCES public.player (player_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION,
+    CONSTRAINT season_orange_cap_id_fkey FOREIGN KEY (orange_cap_id)
+        REFERENCES public.player (player_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION,
+    CONSTRAINT season_purple_cap_id_fkey FOREIGN KEY (purple_cap_id)
+        REFERENCES public.player (player_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+)
+
+CREATE TABLE public.match
+(
+    match_id bigint NOT NULL,
+    match_date date,
+    team_name_id integer,
+    opponent_team_id integer,
+    season_id integer,
+    venue_name character varying(150) COLLATE pg_catalog."default",
+    toss_winner_id integer,
+    toss_decision character varying(20) COLLATE pg_catalog."default",
+    is_superover integer,
+    is_result integer,
+    is_duckworthlewis integer,
+    win_type character varying(50) COLLATE pg_catalog."default",
+    won_by integer,
+    match_winner_id integer,
+    man_of_the_match_id integer,
+    first_umpire_id integer,
+    second_umpire_id integer,
+    city_name character varying(150) COLLATE pg_catalog."default",
+    host_country character varying(100) COLLATE pg_catalog."default",
+    CONSTRAINT match_pkey PRIMARY KEY (match_id),
+    CONSTRAINT match_man_of_the_match_id_fkey FOREIGN KEY (man_of_the_match_id)
+        REFERENCES public.player (player_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION,
+    CONSTRAINT match_match_winner_id_fkey FOREIGN KEY (match_winner_id)
+        REFERENCES public.team (team_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION,
+    CONSTRAINT match_opponent_team_id_fkey FOREIGN KEY (opponent_team_id)
+        REFERENCES public.team (team_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION,
+    CONSTRAINT match_season_id_fkey FOREIGN KEY (season_id)
+        REFERENCES public.season (season_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION,
+    CONSTRAINT match_team_name_id_fkey FOREIGN KEY (team_name_id)
+        REFERENCES public.team (team_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION,
+    CONSTRAINT match_toss_winner_id_fkey FOREIGN KEY (toss_winner_id)
+        REFERENCES public.team (team_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+)
+
+CREATE TABLE public.ball_by_ball
+(
+    match_id integer,
+    innings_id integer,
+    over_id integer,
+    ball_id integer NOT NULL,
+    team_batting_id integer,
+    team_bowling_id integer,
+    striker_id integer,
+    striker_batting_position integer,
+    non_striker_id integer,
+    bowler_id integer,
+    batsman_scored character varying(10) COLLATE pg_catalog."default",
+    extra_type character varying(50) COLLATE pg_catalog."default",
+    extra_runs integer,
+    player_dissimal_id integer,
+    dissimal_type character varying(50) COLLATE pg_catalog."default",
+    fielder_id integer,
+    unid integer NOT NULL DEFAULT nextval('ball_by_ball_unid_seq'::regclass),
+    CONSTRAINT ball_by_ball_bowler_id_fkey FOREIGN KEY (bowler_id)
+        REFERENCES public.player (player_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION,
+    CONSTRAINT ball_by_ball_fielder_id_fkey FOREIGN KEY (fielder_id)
+        REFERENCES public.player (player_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION,
+    CONSTRAINT ball_by_ball_match_id_fkey FOREIGN KEY (match_id)
+        REFERENCES public.match (match_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION,
+    CONSTRAINT ball_by_ball_non_striker_id_fkey FOREIGN KEY (non_striker_id)
+        REFERENCES public.player (player_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION,
+    CONSTRAINT ball_by_ball_player_dissimal_id_fkey FOREIGN KEY (player_dissimal_id)
+        REFERENCES public.player (player_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION,
+    CONSTRAINT ball_by_ball_striker_id_fkey FOREIGN KEY (striker_id)
+        REFERENCES public.player (player_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION,
+    CONSTRAINT ball_by_ball_team_batting_id_fkey FOREIGN KEY (team_batting_id)
+        REFERENCES public.team (team_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION,
+    CONSTRAINT ball_by_ball_team_bowling_id_fkey FOREIGN KEY (team_bowling_id)
+        REFERENCES public.team (team_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+)
